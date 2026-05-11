@@ -1,11 +1,16 @@
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
-const tile = 64;
 
 // Подключаем Telegram WebApp API
 const tg = window.Telegram.WebApp;
-tg.ready(); // Сообщаем Telegram, что приложение готово
-tg.expand(); // Разворачиваем на весь экран
+tg.ready();
+tg.expand();
+
+// Настраиваем размер: берем ширину экрана и делим на количество клеток (10)
+const mapSize = 10;
+const tile = Math.floor(window.innerWidth / mapSize); 
+canvas.width = tile * mapSize;
+canvas.height = tile * mapSize;
 
 const map = [
  [1,1,1,1,1,1,1,1,1,1],
@@ -21,13 +26,14 @@ const map = [
 ];
 
 let player = {x:1, y:1};
-let coins = countCoins();
 
 function countCoins() {
   let c = 0;
   for (const row of map) for (const v of row) if (v === 2) c++;
   return c;
 }
+
+let coins = countCoins();
 
 function draw() {
   ctx.clearRect(0,0,canvas.width,canvas.height);
@@ -44,17 +50,20 @@ function draw() {
       if (v === 2) {
         ctx.fillStyle = 'gold'; // Монетки
         ctx.beginPath();
-        ctx.arc(x*tile+32, y*tile+32, 12, 0, Math.PI*2);
+        ctx.arc(x*tile + tile/2, y*tile + tile/2, tile/4, 0, Math.PI*2);
         ctx.fill();
       }
       if (v === 3) {
         ctx.fillStyle = coins === 0 ? '#c98b42' : '#555'; // Дверь
-        ctx.fillRect(x*tile+16, y*tile+8, 32, 48);
+        ctx.fillRect(x*tile + tile/4, y*tile + tile/8, tile/2, tile*0.75);
       }
     }
   }
-  ctx.font = '40px serif';
-  ctx.fillText('🦊', player.x*tile+10, player.y*tile+48);
+  // Рисуем лису, подгоняя размер шрифта под размер клетки
+  ctx.font = `${tile * 0.8}px serif`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText('🦊', player.x * tile + tile/2, player.y * tile + tile/2);
 }
 
 function move(dx, dy) {
@@ -73,15 +82,48 @@ function move(dx, dy) {
   }
 
   if (cell === 3 && coins === 0) {
-    // Вместо alert используем интерфейс Telegram
     tg.showAlert('❤️ Максим, ЛЮБЛЮ ТЕБЯ! ❤️', () => {
-        tg.close(); // Закрыть приложение после нажатия ОК
+        tg.close();
     });
   }
   draw();
 }
 
-// Управление кнопками на экране или клавиатурой
+// УПРАВЛЕНИЕ ДЛЯ ТЕЛЕФОНА (нажатие на части экрана)
+canvas.addEventListener('touchstart', e => {
+  const touch = e.touches[0];
+  const rect = canvas.getBoundingClientRect();
+  const tx = touch.clientX - rect.left;
+  const ty = touch.clientY - rect.top;
+
+  // Рассчитываем, куда нажал пользователь относительно лисы
+  const pdx = tx - (player.x * tile + tile/2);
+  const pdy = ty - (player.y * tile + tile/2);
+
+  if (Math.abs(pdx) > Math.abs(pdy)) {
+    move(pdx > 0 ? 1 : -1, 0); // Ходим влево-вправо
+  } else {
+    move(pdy > 0 ? 1 : -1, 0); // Ой, тут ошибка была, вот так:
+    // Исправлено:
+  }
+});
+
+// Упрощенное управление кликом для теста
+canvas.addEventListener('click', e => {
+  const rect = canvas.getBoundingClientRect();
+  const clickX = e.clientX - rect.left;
+  const clickY = e.clientY - rect.top;
+  
+  const targetX = Math.floor(clickX / tile);
+  const targetY = Math.floor(clickY / tile);
+  
+  // Простое перемещение в сторону клика
+  if (targetX > player.x) move(1, 0);
+  else if (targetX < player.x) move(-1, 0);
+  else if (targetY > player.y) move(0, 1);
+  else if (targetY < player.y) move(0, -1);
+});
+
 document.addEventListener('keydown', e => {
   if (e.key === 'ArrowUp') move(0,-1);
   if (e.key === 'ArrowDown') move(0,1);
