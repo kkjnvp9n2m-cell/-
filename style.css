@@ -1,14 +1,24 @@
 body {
-  margin:0;
-  background:#1f4d1f;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  height:100vh;
+  margin: 0;
+  padding: 0;
+  background: #1f4d1f;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  /* Используем min-height вместо height, чтобы избежать проблем с прокруткой */
+  min-height: 100vh;
+  /* Запрещаем случайное выделение текста и свайпы */
+  touch-action: none;
+  overflow: hidden;
 }
 
 canvas {
-  border:4px solid #6b3e26;
+  border: 4px solid #6b3e26;
   image-rendering: pixelated;
-  background:#2f7d32;
+  background: #2f7d32;
+  /* Эти три строки ниже сделают канвас адаптивным */
+  max-width: 95vw;    /* Не шире 95% экрана */
+  max-height: 80vh;   /* Не выше 80% экрана (оставляем место под кнопки) */
+  width: auto;
+  height: auto;
 }
