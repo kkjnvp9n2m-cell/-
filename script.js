@@ -1,14 +1,14 @@
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 
-// Подключаем Telegram WebApp API
 const tg = window.Telegram.WebApp;
 tg.ready();
 tg.expand();
 
-// Настраиваем размер: берем ширину экрана и делим на количество клеток (10)
+// Адаптация размера под экран
 const mapSize = 10;
-const tile = Math.floor(window.innerWidth / mapSize); 
+const screenWidth = window.innerWidth;
+const tile = Math.floor(screenWidth / mapSize);
 canvas.width = tile * mapSize;
 canvas.height = tile * mapSize;
 
@@ -26,14 +26,13 @@ const map = [
 ];
 
 let player = {x:1, y:1};
+let coins = countCoins();
 
 function countCoins() {
   let c = 0;
   for (const row of map) for (const v of row) if (v === 2) c++;
   return c;
 }
-
-let coins = countCoins();
 
 function draw() {
   ctx.clearRect(0,0,canvas.width,canvas.height);
@@ -59,8 +58,7 @@ function draw() {
       }
     }
   }
-  // Рисуем лису, подгоняя размер шрифта под размер клетки
-  ctx.font = `${tile * 0.8}px serif`;
+  ctx.font = `${tile * 0.7}px serif`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.fillText('🦊', player.x * tile + tile/2, player.y * tile + tile/2);
@@ -70,18 +68,16 @@ function move(dx, dy) {
   const nx = player.x + dx;
   const ny = player.y + dy;
   if (ny < 0 || ny >= map.length || nx < 0 || nx >= map[0].length) return;
-  
-  const cell = map[ny][nx];
-  if (cell === 1) return;
+  if (map[ny][nx] === 1) return;
 
   player.x = nx; player.y = ny;
 
-  if (cell === 2) {
+  if (map[ny][nx] === 2) {
     map[ny][nx] = 0;
     coins--;
   }
 
-  if (cell === 3 && coins === 0) {
+  if (map[ny][nx] === 3 && coins === 0) {
     tg.showAlert('❤️ Максим, ЛЮБЛЮ ТЕБЯ! ❤️', () => {
         tg.close();
     });
@@ -89,41 +85,29 @@ function move(dx, dy) {
   draw();
 }
 
-// УПРАВЛЕНИЕ ДЛЯ ТЕЛЕФОНА (нажатие на части экрана)
-canvas.addEventListener('touchstart', e => {
-  const touch = e.touches[0];
-  const rect = canvas.getBoundingClientRect();
-  const tx = touch.clientX - rect.left;
-  const ty = touch.clientY - rect.top;
+// УПРАВЛЕНИЕ ТАПАМИ (нажатие на края экрана)
+canvas.addEventListener('touchstart', (e) => {
+    e.preventDefault(); // Запрещаем прокрутку страницы при игре
+    const touch = e.touches[0];
+    const rect = canvas.getBoundingClientRect();
+    const x = touch.clientX - rect.left;
+    const y = touch.clientY - rect.top;
 
-  // Рассчитываем, куда нажал пользователь относительно лисы
-  const pdx = tx - (player.x * tile + tile/2);
-  const pdy = ty - (player.y * tile + tile/2);
+    // Центр текущего положения лисы
+    const centerX = player.x * tile + tile/2;
+    const centerY = player.y * tile + tile/2;
 
-  if (Math.abs(pdx) > Math.abs(pdy)) {
-    move(pdx > 0 ? 1 : -1, 0); // Ходим влево-вправо
-  } else {
-    move(pdy > 0 ? 1 : -1, 0); // Ой, тут ошибка была, вот так:
-    // Исправлено:
-  }
-});
+    const diffX = x - centerX;
+    const diffY = y - centerY;
 
-// Упрощенное управление кликом для теста
-canvas.addEventListener('click', e => {
-  const rect = canvas.getBoundingClientRect();
-  const clickX = e.clientX - rect.left;
-  const clickY = e.clientY - rect.top;
-  
-  const targetX = Math.floor(clickX / tile);
-  const targetY = Math.floor(clickY / tile);
-  
-  // Простое перемещение в сторону клика
-  if (targetX > player.x) move(1, 0);
-  else if (targetX < player.x) move(-1, 0);
-  else if (targetY > player.y) move(0, 1);
-  else if (targetY < player.y) move(0, -1);
-});
+    if (Math.abs(diffX) > Math.abs(diffY)) {
+        move(diffX > 0 ? 1 : -1, 0); // Движение по горизонтали
+    } else {
+        move(0, diffY > 0 ? 1 : -1); // Движение по вертикали
+    }
+}, {passive: false});
 
+// Клавиатура (для теста с ПК)
 document.addEventListener('keydown', e => {
   if (e.key === 'ArrowUp') move(0,-1);
   if (e.key === 'ArrowDown') move(0,1);
@@ -132,3 +116,4 @@ document.addEventListener('keydown', e => {
 });
 
 draw();
+
